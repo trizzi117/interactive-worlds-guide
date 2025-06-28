@@ -74,7 +74,11 @@ npm run dev
 ### Сборка для продакшена
 
 ```bash
+# Стандартная сборка
 npm run build
+
+# Специальная сборка для Telegram Mini App
+npm run build:twa
 ```
 
 Собранные файлы будут в папке `dist/`
@@ -246,6 +250,7 @@ npm run dev:full         # Запуск с backend сервером
 
 # Сборка
 npm run build            # Сборка для продакшена
+npm run build:twa        # Сборка для Telegram Mini App
 npm run preview          # Предварительный просмотр сборки
 
 # Сервер
@@ -274,12 +279,12 @@ npm run format
 
 ### Netlify
 1. Подключите репозиторий к Netlify
-2. Укажите build команду: `npm run build`
+2. Укажите build команду: `npm run build:twa`
 3. Укажите publish directory: `dist`
 
 ### GitHub Pages
 ```bash
-npm run build
+npm run build:twa
 git add dist -f
 git commit -m "Deploy to GitHub Pages"
 git subtree push --prefix dist origin gh-pages
@@ -291,6 +296,7 @@ git subtree push --prefix dist origin gh-pages
 - Все данные пользователя передаются через защищенный канал
 - Валидация данных на стороне клиента и сервера
 - Использование HTTPS обязательно
+- Безопасный доступ к WebApp API через проверки существования
 
 ### Хранение данных
 - Прогресс игры сохраняется локально в localStorage
@@ -303,6 +309,9 @@ git subtree push --prefix dist origin gh-pages
 ```javascript
 // Включение подробных логов
 localStorage.setItem('debug', 'true');
+
+// Проверка доступа к Telegram WebApp API
+console.log(window.Telegram?.WebApp);
 ```
 
 ### Инструменты разработчика
@@ -316,12 +325,22 @@ localStorage.setItem('debug', 'true');
    - Проверьте консоль браузера на ошибки
    - Убедитесь, что все зависимости установлены
    - Проверьте правильность токена бота
+   - Проверьте доступ к WebApp API с проверками на null/undefined
 
-2. **Анимации не работают**
+2. **Пустой экран после загрузки**
+   - Проверьте безопасный доступ к WebApp API
+   - Убедитесь в правильности функции getWorldById
+   - Добавьте проверки на существование данных
+
+3. **Ошибки 404**
+   - Проверьте наличие всех иконок и манифеста
+   - Используйте относительные пути в конфигурации Vite
+
+4. **Анимации не работают**
    - Убедитесь, что Framer Motion установлен
    - Проверьте поддержку браузером CSS animations
 
-3. **Стили не применяются**
+5. **Стили не применяются**
    - Проверьте, что Tailwind CSS правильно настроен
    - Убедитесь, что файл globals.css импортирован
 
@@ -332,6 +351,7 @@ localStorage.setItem('debug', 'true');
 - **Lazy loading** для компонентов
 - **Мемоизация** для предотвращения лишних ререндеров
 - **Оптимизация изображений** и ассетов
+- **Безопасный доступ к API** с проверками существования
 
 ### Метрики
 - **First Contentful Paint**: < 1.5s
@@ -378,5 +398,3 @@ MIT License - см. файл [LICENSE](LICENSE) для подробностей.
 ---
 
 **Создано с ❤️ для сообщества Telegram Mini Apps** 
-
-npm run build:twa 

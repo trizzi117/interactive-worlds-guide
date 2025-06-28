@@ -12,6 +12,8 @@ import DialogueScreen from '@/components/DialogueScreen';
 import InventoryScreen from '@/components/InventoryScreen';
 import QuestScreen from '@/components/QuestScreen';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import TutorialOverlay from '@/components/TutorialOverlay';
+import StartScreen from '@/components/StartScreen';
 
 // Стили
 import '@/styles/globals.css';
@@ -19,6 +21,7 @@ import '@/styles/globals.css';
 const App: React.FC = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showStartScreen, setShowStartScreen] = useState(true);
   
   const {
     player,
@@ -112,7 +115,7 @@ const App: React.FC = () => {
         if (telegramWebApp?.BackButton) {
           console.log('[DEBUG] BackButton доступна');
           telegramWebApp.BackButton.onClick(() => {
-            if (gameMode === 'dialogue' || gameMode === 'inventory' || gameMode === 'quest') {
+            if (gameMode === 'dialogue' || gameMode === 'inventory' || gameMode === 'quest' || gameMode === 'tutorial') {
               setGameMode('exploration');
             }
           });
@@ -121,8 +124,27 @@ const App: React.FC = () => {
           console.log('[DEBUG] BackButton недоступна');
         }
 
+        // Настраиваем главную кнопку для перехода в Mini App
+        try {
+          if (telegramWebApp?.MainButton) {
+            telegramWebApp.MainButton.setText('Открыть приключение');
+            telegramWebApp.MainButton.show();
+            telegramWebApp.MainButton.onClick(() => {
+              console.log('[DEBUG] Нажата главная кнопка для открытия Mini App');
+            });
+          }
+        } catch (e) {
+          console.error('[DEBUG] Ошибка при настройке главной кнопки:', e);
+        }
+
         console.log('[DEBUG] Инициализация завершена, устанавливаем isInitialized = true');
         setIsInitialized(true);
+
+        // Проверяем, не первый ли раз пользователь открывает приложение
+        // Если пользователь уже играл, пропускаем начальный экран
+        if (player && player.visitedLocations.length > 0) {
+          setShowStartScreen(false);
+        }
       } catch (err) {
         console.error('Ошибка инициализации приложения:', err);
         console.error('[DEBUG] Стек ошибки:', err instanceof Error ? err.stack : 'Нет стека');
@@ -199,6 +221,29 @@ const App: React.FC = () => {
   if (!isInitialized || isLoading) {
     return <LoadingScreen />;
   }
+  
+  // Функция для отображения контента в зависимости от режима игры
+  const renderGameContent = () => {
+    switch (gameMode) {
+      case 'dialogue':
+        return <DialogueScreen />;
+      case 'inventory':
+        return <InventoryScreen />;
+      case 'quest':
+        return <QuestScreen />;
+      default:
+        return null;
+    }
+  };
+
+  // Если показываем стартовый экран
+  if (showStartScreen) {
+    return (
+      <ErrorBoundary>
+        <StartScreen onStartGame={() => setShowStartScreen(false)} />
+      </ErrorBoundary>
+    );
+  }
 
   return (
     <ErrorBoundary>
@@ -236,23 +281,21 @@ const App: React.FC = () => {
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.3 }}
                     >
-                      {gameMode === 'dialogue' && currentDialogue ? (
-                        <DialogueScreen />
-                      ) : gameMode === 'inventory' ? (
-                        <InventoryScreen />
-                      ) : gameMode === 'quest' ? (
-                        <QuestScreen />
-                      ) : (
-                        <GameWorld />
-                      )}
+                      <GameWorld />
+                      {renderGameContent()}
                     </motion.div>
                   ) : (
                     <Navigate to="/" replace />
                   )
                 }
               />
+              
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </AnimatePresence>
+          
+          {/* Оверлей для обучения будет отображен поверх всего интерфейса */}
+          <TutorialOverlay />
         </div>
       </Router>
     </ErrorBoundary>

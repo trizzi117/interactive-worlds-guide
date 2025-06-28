@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { AppState, PlayerState, World, Dialogue, Quest, Item, Character, Location } from '@/types';
+import { AppState, PlayerState, World, Dialogue, Quest, Item, Character, Location, TutorialState } from '@/types';
 import { allWorlds, getWorldById, WorldId } from '@/data/worlds';
 
 interface GameStore extends AppState {
@@ -19,6 +19,12 @@ interface GameStore extends AppState {
   resetGame: () => void;
   saveGame: () => void;
   loadGame: () => void;
+  // Новые действия для обучения
+  startTutorial: () => void;
+  nextTutorialStep: () => void;
+  completeTutorialStep: (stepId: string) => void;
+  dismissTutorial: (forever?: boolean) => void;
+  setGameDifficulty: (difficulty: AppState['gameDifficulty']) => void;
 }
 
 const initialPlayerState: PlayerState = {
@@ -35,13 +41,22 @@ const initialPlayerState: PlayerState = {
   achievements: []
 };
 
+const initialTutorialState: TutorialState = {
+  isActive: false,
+  currentStep: 0,
+  completedSteps: [],
+  dismissedForever: false
+};
+
 const initialAppState: AppState = {
   player: initialPlayerState,
   currentWorld: null,
   currentDialogue: null,
   isLoading: false,
   error: null,
-  gameMode: 'exploration'
+  gameMode: 'exploration',
+  tutorialState: initialTutorialState,
+  gameDifficulty: 'medium'
 };
 
 export const useGameStore = create<GameStore>()(
@@ -66,11 +81,24 @@ export const useGameStore = create<GameStore>()(
         const world = getWorldById(worldId);
         console.log('[DEBUG] Получен мир:', world ? world.id : 'не найден');
 
+        // Проверяем, нужно ли запустить обучение
+        const shouldStartTutorial = !get().tutorialState?.dismissedForever;
+
         set({
           player,
           currentWorld: world,
-          isLoading: false
+          isLoading: false,
+          tutorialState: {
+            ...initialTutorialState,
+            isActive: shouldStartTutorial
+          }
         });
+        
+        // Если это первый запуск, автоматически запускаем обучение
+        if (shouldStartTutorial) {
+          setTimeout(() => get().startTutorial(), 1000);
+        }
+        
         console.log('[DEBUG] Состояние после initializePlayer:', {
           player,
           currentWorld: world,
@@ -401,6 +429,12 @@ export const useGameStore = create<GameStore>()(
       },
 
       setGameMode: (mode) => {
+        // Если активно обучение, не переключаем режим (кроме явного переключения в режим tutorial)
+        if (get().tutorialState?.isActive && mode !== 'tutorial') {
+          console.log('[DEBUG] Переключение режима заблокировано во время обучения');
+          return;
+        }
+        console.log('[DEBUG] Установка режима игры:', mode);
         set({ gameMode: mode });
       },
 
@@ -414,14 +448,75 @@ export const useGameStore = create<GameStore>()(
 
       loadGame: () => {
         // Загрузка происходит автоматически через persist middleware
-      }
+      },
+
+      // Методы для системы обучения
+      startTutorial: () => {
+        console.log('[DEBUG] Запуск обучения');
+        set({
+          tutorialState: {
+            isActive: true,
+            currentStep: 0,
+            completedSteps: [],
+            dismissedForever: false
+          },
+          gameMode: 'tutorial'
+        });
+      },
+
+      nextTutorialStep: () => {
+        const { tutorialState } = get();
+        if (!tutorialState) return;
+
+        const nextStep = tutorialState.currentStep + 1;
+        console.log('[DEBUG] Переход к шагу обучения:', nextStep);
+        
+        set({
+          tutorialState: {
+            ...tutorialState,
+            currentStep: nextStep
+          }
+        });
+      },
+
+      completeTutorialStep: (stepId) => {
+        const { tutorialState } = get();
+        if (!tutorialState) return;
+
+        console.log('[DEBUG] Завершен шаг обучения:', stepId);
+        set({
+          tutorialState: {
+            ...tutorialState,
+            completedSteps: [...tutorialState.completedSteps, stepId]
+          }
+        });
+      },
+
+      dismissTutorial: (forever = false) => {
+        console.log('[DEBUG] Закрытие обучения, навсегда:', forever);
+        set({
+          tutorialState: {
+            ...initialTutorialState,
+            dismissedForever: forever
+          },
+          gameMode: 'exploration'
+        });
+      },
+
+      setGameDifficulty: (difficulty) => {
+        console.log('[DEBUG] Установка сложности игры:', difficulty);
+        set({ gameDifficulty: difficulty });
+      },
     }),
     {
-      name: 'interactive-worlds-save',
+      name: 'game-storage',
       partialize: (state) => ({
         player: state.player,
-        currentWorld: state.currentWorld,
-        gameMode: state.gameMode
+        gameDifficulty: state.gameDifficulty,
+        tutorialState: {
+          ...state.tutorialState,
+          isActive: false // Всегда отключаем активное состояние при сохранении
+        }
       })
     }
   )

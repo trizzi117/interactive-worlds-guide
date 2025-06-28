@@ -155,7 +155,28 @@ export interface AppState {
   currentDialogue: Dialogue | null;
   isLoading: boolean;
   error: string | null;
-  gameMode: 'exploration' | 'dialogue' | 'puzzle' | 'inventory';
+  gameMode: 'exploration' | 'dialogue' | 'puzzle' | 'inventory' | 'quest' | 'tutorial';
+  tutorialState: TutorialState | null;
+  gameDifficulty: 'easy' | 'medium' | 'hard';
+}
+
+// Типы для системы обучения
+export interface TutorialState {
+  isActive: boolean;
+  currentStep: number;
+  completedSteps: string[];
+  dismissedForever: boolean;
+}
+
+export interface TutorialStep {
+  id: string;
+  title: string;
+  content: string;
+  targetElement?: string; // CSS селектор для элемента, на который указывает подсказка
+  position?: 'top' | 'bottom' | 'left' | 'right';
+  action?: 'click' | 'select' | 'navigate';
+  nextStepTrigger?: 'auto' | 'click' | 'action';
+  completionAction?: () => void;
 }
 
 // Telegram Mini App типы
