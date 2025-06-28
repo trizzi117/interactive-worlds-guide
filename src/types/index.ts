@@ -118,10 +118,12 @@ export interface Puzzle {
 }
 
 // Состояние игрока
+import { WorldId } from '@/data/worlds';
+
 export interface PlayerState {
   id: string;
   name: string;
-  currentWorld: string;
+  currentWorld: WorldId;
   currentLocation: string;
   inventory: PlayerItem[];
   completedQuests: string[];

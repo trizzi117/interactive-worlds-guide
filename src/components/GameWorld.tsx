@@ -20,7 +20,8 @@ const GameWorld: React.FC = () => {
     visitLocation, 
     startDialogue, 
     setGameMode,
-    selectWorld 
+    selectWorld,
+    allWorlds
   } = useGameStore();
 
   const [selectedTab, setSelectedTab] = useState<'locations' | 'characters' | 'quests'>('locations');
@@ -31,7 +32,20 @@ const GameWorld: React.FC = () => {
         <div className="text-center">
           <p className="text-gray-600 dark:text-gray-300 mb-4">Мир не загружен</p>
           <button
-            onClick={() => selectWorld('fantasy')}
+            onClick={() => {
+              console.log('[DEBUG] Нажата кнопка возврата к выбору мира');
+              // Сбрасываем текущий мир, но не передаем пустую строку
+              if (allWorlds && allWorlds.length > 0) {
+                // Временно выбираем первый мир, чтобы избежать ошибки с пустым id
+                const tempWorldId = allWorlds[0].id;
+                selectWorld(tempWorldId as any);
+                // Затем переходим на страницу выбора мира
+                window.location.href = '/';
+              } else {
+                console.log('[DEBUG] allWorlds не определен или пуст, переходим на главную');
+                window.location.href = '/';
+              }
+            }}
             className="px-4 py-2 bg-blue-500 text-white rounded-lg"
           >
             Вернуться к выбору мира
@@ -71,6 +85,11 @@ const GameWorld: React.FC = () => {
     setGameMode('quest');
   };
 
+  // ВРЕМЕННЫЙ ОТЛАДОЧНЫЙ ВЫВОД
+  if (currentWorld) {
+    console.log('[DEBUG] currentWorld:', currentWorld);
+  }
+
   return (
     <div className="min-h-screen p-4">
       <div className="max-w-4xl mx-auto">
@@ -90,7 +109,20 @@ const GameWorld: React.FC = () => {
               </p>
             </div>
             <button
-              onClick={() => selectWorld('')}
+              onClick={() => {
+                console.log('[DEBUG] Нажата кнопка возврата к выбору мира');
+                // Сбрасываем текущий мир, но не передаем пустую строку
+                if (allWorlds && allWorlds.length > 0) {
+                  // Временно выбираем первый мир, чтобы избежать ошибки с пустым id
+                  const tempWorldId = allWorlds[0].id;
+                  selectWorld(tempWorldId as any);
+                  // Затем переходим на страницу выбора мира
+                  window.location.href = '/';
+                } else {
+                  console.log('[DEBUG] allWorlds не определен или пуст, переходим на главную');
+                  window.location.href = '/';
+                }
+              }}
               className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             >
               <ArrowLeft size={20} />
@@ -317,6 +349,22 @@ const GameWorld: React.FC = () => {
             </button>
           </div>
         </motion.div>
+
+        {/* ВРЕМЕННЫЙ ОТЛАДОЧНЫЙ ВЫВОД */}
+        {currentWorld && (
+          <div className="mb-4 p-2 bg-yellow-100 text-xs text-gray-800 rounded shadow">
+            <div><b>currentWorld.id:</b> {currentWorld.id}</div>
+            <div><b>name:</b> {currentWorld.name}</div>
+            <div><b>genre:</b> {currentWorld.genre}</div>
+            <div><b>locations:</b> {currentWorld.locations.length}</div>
+            <div><b>characters:</b> {currentWorld.characters.length}</div>
+            <div><b>quests:</b> {currentWorld.quests.length}</div>
+            <details>
+              <summary>JSON</summary>
+              <pre style={{maxHeight: 200, overflow: 'auto'}}>{JSON.stringify(currentWorld, null, 2)}</pre>
+            </details>
+          </div>
+        )}
       </div>
     </div>
   );

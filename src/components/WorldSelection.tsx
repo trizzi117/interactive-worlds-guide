@@ -22,7 +22,19 @@ const WorldSelection: React.FC = () => {
   };
 
   const handleWorldSelect = (worldId: string) => {
-    selectWorld(worldId);
+    // Проверяем, что id не пустой и существует в списке доступных миров
+    if (worldId && allWorlds.some(world => world.id === worldId)) {
+      console.log('[DEBUG] Выбран мир:', worldId);
+      selectWorld(worldId as any);
+    } else {
+      console.error(`[DEBUG] Попытка выбрать недопустимый мир с id "${worldId}"`);
+      // Выбираем первый доступный мир как запасной вариант
+      if (allWorlds.length > 0) {
+        const defaultWorldId = allWorlds[0].id;
+        console.log('[DEBUG] Используем мир по умолчанию:', defaultWorldId);
+        selectWorld(defaultWorldId as any);
+      }
+    }
   };
 
   return (

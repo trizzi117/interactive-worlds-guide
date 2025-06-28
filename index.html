@@ -40,9 +40,8 @@
   
   <title>Интерактивный путеводитель по мирам</title>
   
-  <!-- Preload critical resources -->
-  <link rel="preload" href="/src/styles/globals.css" as="style">
-  <link rel="preload" href="/src/main.tsx" as="script">
+  <!-- Подключение стилей напрямую -->
+  <!-- Стили подключаются через import в main.tsx -->
   
   <!-- Prevent flash of unstyled content -->
   <style>
@@ -108,75 +107,110 @@
   <!-- Root element for React -->
   <div id="root"></div>
   
-  <!-- Telegram Web App Script -->
+  <!-- Telegram Web App Script - используем CDN для надежности -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   
   <!-- Remove loading screen when app is ready -->
   <script>
-    // Hide loading screen when React app is ready
-    window.addEventListener('load', function() {
-      setTimeout(function() {
-        const loading = document.getElementById('loading');
-        if (loading) {
-          loading.style.opacity = '0';
-          loading.style.transition = 'opacity 0.5s ease';
-          setTimeout(function() {
-            loading.remove();
-          }, 500);
+    // Проверяем готовность Telegram Web App
+    let webAppChecks = 0;
+    const maxWebAppChecks = 10;
+    
+    function checkWebAppReady() {
+      webAppChecks++;
+      console.log('[DEBUG] Проверка WebApp #' + webAppChecks);
+      
+      if (window.Telegram && window.Telegram.WebApp) {
+        console.log('[DEBUG] WebApp найден, инициализируем');
+        initWebApp();
+        return;
+      }
+      
+      if (webAppChecks < maxWebAppChecks) {
+        console.log('[DEBUG] WebApp не найден, повторная проверка...');
+        setTimeout(checkWebAppReady, 300);
+      } else {
+        console.log('[DEBUG] WebApp не найден после ' + maxWebAppChecks + ' попыток');
+        // Продолжаем без WebApp
+        hideLoadingScreen();
+      }
+    }
+    
+    function initWebApp() {
+      if (window.Telegram && window.Telegram.WebApp) {
+        window.Telegram.WebApp.ready();
+        
+        // Set up theme
+        const isDark = window.Telegram.WebApp.colorScheme === 'dark';
+        document.documentElement.classList.toggle('dark', isDark);
+        
+        // Set theme colors
+        if (window.Telegram.WebApp.themeParams) {
+          const params = window.Telegram.WebApp.themeParams;
+          
+          if (params.bg_color) {
+            document.documentElement.style.setProperty(
+              '--tg-theme-bg-color',
+              params.bg_color
+            );
+          }
+          
+          if (params.text_color) {
+            document.documentElement.style.setProperty(
+              '--tg-theme-text-color',
+              params.text_color
+            );
+          }
+          
+          if (params.button_color) {
+            document.documentElement.style.setProperty(
+              '--tg-theme-button-color',
+              params.button_color
+            );
+          }
+          
+          if (params.button_text_color) {
+            document.documentElement.style.setProperty(
+              '--tg-theme-button-text-color',
+              params.button_text_color
+            );
+          }
         }
-      }, 1000);
+      }
+      
+      // Hide loading screen
+      hideLoadingScreen();
+    }
+    
+    function hideLoadingScreen() {
+      const loading = document.getElementById('loading');
+      if (loading) {
+        loading.style.opacity = '0';
+        loading.style.transition = 'opacity 0.5s ease';
+        setTimeout(function() {
+          loading.remove();
+        }, 500);
+      }
+    }
+    
+    // Start checking for WebApp
+    window.addEventListener('load', function() {
+      console.log('[DEBUG] Страница загружена, начинаем проверку WebApp');
+      setTimeout(checkWebAppReady, 300);
     });
     
-    // Handle Telegram Web App initialization
-    if (window.Telegram && window.Telegram.WebApp) {
-      window.Telegram.WebApp.ready();
-      
-      // Set up theme
-      const isDark = window.Telegram.WebApp.colorScheme === 'dark';
-      document.documentElement.classList.toggle('dark', isDark);
-      
-      // Set theme colors
-      if (window.Telegram.WebApp.themeParams.bg_color) {
-        document.documentElement.style.setProperty(
-          '--tg-theme-bg-color',
-          window.Telegram.WebApp.themeParams.bg_color
-        );
-      }
-      
-      if (window.Telegram.WebApp.themeParams.text_color) {
-        document.documentElement.style.setProperty(
-          '--tg-theme-text-color',
-          window.Telegram.WebApp.themeParams.text_color
-        );
-      }
-      
-      if (window.Telegram.WebApp.themeParams.button_color) {
-        document.documentElement.style.setProperty(
-          '--tg-theme-button-color',
-          window.Telegram.WebApp.themeParams.button_color
-        );
-      }
-      
-      if (window.Telegram.WebApp.themeParams.button_text_color) {
-        document.documentElement.style.setProperty(
-          '--tg-theme-button-text-color',
-          window.Telegram.WebApp.themeParams.button_text_color
-        );
-      }
-    }
-    
-    // Service Worker registration for PWA
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function() {
-        navigator.serviceWorker.register('/sw.js')
-          .then(function(registration) {
-            console.log('SW registered: ', registration);
-          })
-          .catch(function(registrationError) {
-            console.log('SW registration failed: ', registrationError);
-          });
-      });
-    }
+    // Service Worker registration for PWA - временно отключено
+    // if ('serviceWorker' in navigator) {
+    //   window.addEventListener('load', function() {
+    //     navigator.serviceWorker.register('/sw.js')
+    //       .then(function(registration) {
+    //         console.log('SW registered: ', registration);
+    //       })
+    //       .catch(function(registrationError) {
+    //         console.log('SW registration failed: ', registrationError);
+    //       });
+    //   });
+    // }
   </script>
   
   <!-- Vite entry point -->

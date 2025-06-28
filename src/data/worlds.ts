@@ -461,6 +461,53 @@ export const allWorlds: World[] = [
   egyptWorld
 ];
 
-export const getWorldById = (id: string): World | undefined => {
-  return allWorlds.find(world => world.id === id);
+// Проверка наличия миров при загрузке модуля
+console.log('[DEBUG] Загрузка worlds.ts, доступные миры:', allWorlds.map(w => w.id));
+
+// Типобезопасный id мира
+export type WorldId = 'fantasy' | 'sci-fi' | 'medieval' | 'egypt';
+
+// Проверка валидности id миров
+allWorlds.forEach(world => {
+  if (!world.id) {
+    console.error('[DEBUG] Обнаружен мир с пустым id!', world);
+    // Устанавливаем id по умолчанию для миров с пустым id
+    world.id = world.genre || 'unknown';
+    console.log('[DEBUG] Установлен id по умолчанию:', world.id);
+  }
+});
+
+// Map для быстрого поиска миров по id
+const worldMap: Map<WorldId, World> = new Map(
+  allWorlds
+    .filter(world => !!world.id) // Только миры с непустым id
+    .map(world => [world.id as WorldId, world])
+);
+
+// Проверяем, что все миры доступны в Map
+console.log('[DEBUG] Миры в worldMap:', Array.from(worldMap.keys()));
+
+// Проверяем, что все типы WorldId представлены в Map
+const expectedIds: WorldId[] = ['fantasy', 'sci-fi', 'medieval', 'egypt'];
+expectedIds.forEach(id => {
+  if (!worldMap.has(id)) {
+    console.error(`[DEBUG] Ожидаемый мир с id "${id}" отсутствует в worldMap!`);
+  }
+});
+
+// Улучшенная функция поиска мира
+export const getWorldById = (id: WorldId): World | undefined => {
+  const world = worldMap.get(id);
+  if (!world) {
+    console.error(`Мир с id "${id}" не найден!`);
+    console.error('[DEBUG] Доступные миры:', Array.from(worldMap.keys()));
+    // Возвращаем первый доступный мир как фоллбэк
+    if (worldMap.size > 0) {
+      const firstWorld = worldMap.values().next().value;
+      console.log('[DEBUG] Возвращаем первый доступный мир:', firstWorld.id);
+      return firstWorld;
+    }
+    return undefined;
+  }
+  return world;
 }; 

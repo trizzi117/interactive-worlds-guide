@@ -33,74 +33,106 @@ const App: React.FC = () => {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Инициализируем Telegram Web App
-        WebApp.ready();
+        console.log('[DEBUG] Начало инициализации приложения');
+        // Проверяем наличие WebApp из Telegram или из SDK
+        const telegramWebApp = window.Telegram?.WebApp || WebApp;
+        
+        if (telegramWebApp?.ready) {
+          console.log('[DEBUG] WebApp доступен, вызываем ready()');
+          telegramWebApp.ready();
+        } else {
+          console.log('[DEBUG] WebApp недоступен или метод ready() отсутствует');
+        }
         
         // Настраиваем тему
-        const isDark = WebApp.colorScheme === 'dark';
+        const isDark = telegramWebApp?.colorScheme === 'dark' || 
+                      window.matchMedia('(prefers-color-scheme: dark)').matches;
+        console.log('[DEBUG] Тема:', isDark ? 'тёмная' : 'светлая');
         document.documentElement.classList.toggle('dark', isDark);
         
-        // Устанавливаем цвета из Telegram
-        if (WebApp.themeParams.bg_color) {
+        const themeParams = telegramWebApp?.themeParams ?? {} as any;
+        console.log('[DEBUG] themeParams:', themeParams);
+
+        if (themeParams.bg_color) {
           document.documentElement.style.setProperty(
             '--tg-theme-bg-color',
-            WebApp.themeParams.bg_color
+            themeParams.bg_color
           );
         }
         
-        if (WebApp.themeParams.text_color) {
+        if (themeParams.text_color) {
           document.documentElement.style.setProperty(
             '--tg-theme-text-color',
-            WebApp.themeParams.text_color
+            themeParams.text_color
           );
         }
         
-        if (WebApp.themeParams.button_color) {
+        if (themeParams.button_color) {
           document.documentElement.style.setProperty(
             '--tg-theme-button-color',
-            WebApp.themeParams.button_color
+            themeParams.button_color
           );
         }
         
-        if (WebApp.themeParams.button_text_color) {
+        if (themeParams.button_text_color) {
           document.documentElement.style.setProperty(
             '--tg-theme-button-text-color',
-            WebApp.themeParams.button_text_color
+            themeParams.button_text_color
           );
         }
 
         // Инициализируем игрока, если данные пользователя доступны
-        if (WebApp.initDataUnsafe.user) {
-          initializePlayer(WebApp.initDataUnsafe.user);
+        const tgUser = telegramWebApp?.initDataUnsafe?.user;
+        console.log('[DEBUG] tgUser:', tgUser);
+
+        if (tgUser) {
+          console.log('[DEBUG] Инициализация игрока с данными пользователя');
+          initializePlayer(tgUser);
         } else {
           // Если пользователь не авторизован, создаем временного игрока
+          console.log('[DEBUG] Создание временного игрока');
           initializePlayer({
             id: Date.now(),
             first_name: 'Путник'
           });
         }
 
-        // Настраиваем кнопки Telegram
-        WebApp.MainButton.setText('Меню');
-        WebApp.MainButton.onClick(() => {
-          setGameMode('exploration');
-        });
+        // Настраиваем кнопки Telegram (если доступны)
+        if (telegramWebApp?.MainButton) {
+          console.log('[DEBUG] MainButton доступна');
+          telegramWebApp.MainButton.setText('Меню');
+          telegramWebApp.MainButton.onClick(() => {
+            setGameMode('exploration');
+          });
+        }
+        else {
+          console.log('[DEBUG] MainButton недоступна');
+        }
 
-        // Настраиваем кнопку "Назад"
-        WebApp.BackButton.onClick(() => {
-          if (gameMode === 'dialogue') {
-            setGameMode('exploration');
-          } else if (gameMode === 'inventory') {
-            setGameMode('exploration');
-          } else if (gameMode === 'quest') {
-            setGameMode('exploration');
-          }
-        });
+        if (telegramWebApp?.BackButton) {
+          console.log('[DEBUG] BackButton доступна');
+          telegramWebApp.BackButton.onClick(() => {
+            if (gameMode === 'dialogue' || gameMode === 'inventory' || gameMode === 'quest') {
+              setGameMode('exploration');
+            }
+          });
+        }
+        else {
+          console.log('[DEBUG] BackButton недоступна');
+        }
 
+        console.log('[DEBUG] Инициализация завершена, устанавливаем isInitialized = true');
         setIsInitialized(true);
       } catch (err) {
         console.error('Ошибка инициализации приложения:', err);
-        setError('Ошибка инициализации приложения');
+        console.error('[DEBUG] Стек ошибки:', err instanceof Error ? err.stack : 'Нет стека');
+        // Даже при ошибке инициализации WebApp пытаемся запустить приложение
+        console.log('[DEBUG] Пытаемся продолжить работу приложения, несмотря на ошибку');
+        initializePlayer({
+          id: Date.now(),
+          first_name: 'Гость'
+        });
+        setIsInitialized(true);
       }
     };
 
@@ -108,15 +140,42 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Обновляем видимость кнопок в зависимости от режима игры
+    console.log('[DEBUG] Изменение gameMode:', gameMode);
+    // Проверяем наличие WebApp из Telegram или из SDK
+    const telegramWebApp = window.Telegram?.WebApp || WebApp;
+    const mainButton = telegramWebApp?.MainButton;
+    const backButton = telegramWebApp?.BackButton;
+
+    if (!mainButton || !backButton) return;
+
     if (gameMode === 'exploration') {
-      WebApp.MainButton.hide();
-      WebApp.BackButton.hide();
+      mainButton.hide();
+      backButton.hide();
     } else {
-      WebApp.MainButton.show();
-      WebApp.BackButton.show();
+      mainButton.show();
+      backButton.show();
     }
   }, [gameMode]);
+
+  // Отладочный вывод состояния приложения
+  useEffect(() => {
+    console.log('[DEBUG] Состояние приложения:', {
+      isInitialized,
+      isLoading,
+      error,
+      player: player ? {
+        id: player.id,
+        name: player.name,
+        currentWorld: player.currentWorld
+      } : null,
+      currentWorld: currentWorld ? {
+        id: currentWorld.id,
+        name: currentWorld.name,
+        locationsCount: currentWorld.locations.length
+      } : null,
+      gameMode
+    });
+  }, [isInitialized, isLoading, error, player, currentWorld, gameMode]);
 
   if (error) {
     return (

@@ -378,3 +378,5 @@ MIT License - см. файл [LICENSE](LICENSE) для подробностей.
 ---
 
 **Создано с ❤️ для сообщества Telegram Mini Apps** 
+
+npm run build:twa 

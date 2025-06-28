@@ -1,12 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { AppState, PlayerState, World, Dialogue, Quest, Item, Character, Location } from '@/types';
-import { allWorlds, getWorldById } from '@/data/worlds';
+import { allWorlds, getWorldById, WorldId } from '@/data/worlds';
 
 interface GameStore extends AppState {
   // Actions
   initializePlayer: (telegramUser: any) => void;
-  selectWorld: (worldId: string) => void;
+  selectWorld: (worldId: WorldId) => void;
   visitLocation: (locationId: string) => void;
   startDialogue: (characterId: string, dialogueId: string) => void;
   selectDialogueOption: (optionId: string) => void;
@@ -24,7 +24,7 @@ interface GameStore extends AppState {
 const initialPlayerState: PlayerState = {
   id: '',
   name: '',
-  currentWorld: '',
+  currentWorld: 'fantasy',
   currentLocation: '',
   inventory: [],
   completedQuests: [],
@@ -49,29 +49,52 @@ export const useGameStore = create<GameStore>()(
     (set, get) => ({
       ...initialAppState,
 
+      // Экспортируем миры для доступа из компонентов
+      allWorlds,
+
       initializePlayer: (telegramUser) => {
+        console.log('[DEBUG] initializePlayer вызван с:', telegramUser);
+        const worldId: WorldId = 'fantasy';
         const player: PlayerState = {
           ...initialPlayerState,
           id: telegramUser.id.toString(),
           name: telegramUser.first_name || 'Путник',
-          currentWorld: 'fantasy', // Начинаем с фэнтезийного мира
+          currentWorld: worldId,
           currentLocation: 'fantasy-village'
         };
 
+        const world = getWorldById(worldId);
+        console.log('[DEBUG] Получен мир:', world ? world.id : 'не найден');
+
         set({
           player,
-          currentWorld: getWorldById('fantasy'),
+          currentWorld: world,
+          isLoading: false
+        });
+        console.log('[DEBUG] Состояние после initializePlayer:', {
+          player,
+          currentWorld: world,
           isLoading: false
         });
       },
 
-      selectWorld: (worldId) => {
+      selectWorld: (worldId: WorldId) => {
+        console.log('[DEBUG] selectWorld вызван с id:', worldId);
+        
+        // Проверка на пустой id
+        if (!worldId) {
+          console.error('[DEBUG] Попытка выбрать мир с пустым id');
+          return;
+        }
+        
         const world = getWorldById(worldId);
         if (!world) {
-          set({ error: 'Мир не найден' });
+          console.error(`[DEBUG] Мир с id "${worldId}" не найден в getWorldById`);
+          set({ error: `Мир "${worldId}" не найден` });
           return;
         }
 
+        console.log('[DEBUG] Мир найден:', world.id, world.name);
         const { player } = get();
         const updatedPlayer = {
           ...player,
@@ -79,12 +102,19 @@ export const useGameStore = create<GameStore>()(
           currentLocation: world.locations[0]?.id || ''
         };
 
+        console.log('[DEBUG] Обновление состояния игрока:', {
+          currentWorld: worldId,
+          currentLocation: world.locations[0]?.id || ''
+        });
+        
         set({
           player: updatedPlayer,
           currentWorld: world,
           currentDialogue: null,
           gameMode: 'exploration'
         });
+        
+        console.log('[DEBUG] Состояние обновлено, currentWorld:', world.id);
       },
 
       visitLocation: (locationId) => {
